@@ -1,0 +1,66 @@
+name: Start TZbyRec
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Tags to start'
+        required: true
+
+env:
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HOST: ${{ secrets.SERVER_HOST }}
+      SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tags }}
+
+      - name: Verify tag exists
+        run: |
+          git fetch --all --tags
+          if ! git tag | grep -q "^${{ github.event.inputs.tags }}$"; then
+            echo "[ERROR]: Tag ${{ github.event.inputs.tags }} does not exist"
+            exit 1
+          fi
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+      - name: Setup Docker on server (only first time)
+        run: |
+          ssh -o StrictHostKeyChecking=no $HOST '
+            if ! command -v docker &> /dev/null; then
+              apt-get update
+              apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+              add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+              apt-get update
+              apt-get install -y docker-ce docker-ce-cli containerd.io
+              systemctl enable docker
+            fi
+
+            if ! command -v docker-compose &> /dev/null; then
+              curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              chmod +x /usr/local/bin/docker-compose
+            fi
+
+            docker network create monsieur-kotov-system || true
+          '
+
+      - name: Build Docker container
+        run: |
+          docker build -t rec_dev_launcher .
+
+      - name: Run Docker container
+        run: |
+          docker run -d -p 8080:8080 --name rec_dev_launcher rec_dev_launcher

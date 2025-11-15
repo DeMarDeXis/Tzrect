@@ -1,0 +1,4 @@
+SKGen
+config/local.yaml
+.venv
+Taskfile.yaml

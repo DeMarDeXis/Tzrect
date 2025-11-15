@@ -1,0 +1,10 @@
+services:
+  web-launcher:
+    build: .
+    container_name: rec_dev_launcher
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+    profiles:
+      - dev
