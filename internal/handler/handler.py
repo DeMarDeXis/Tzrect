@@ -1,5 +1,5 @@
-from flask import request, jsonify
-
+from flask import request, Response
+import json
 from internal.service.msg_sender import MessageService
 
 def init_router(app):
@@ -10,4 +10,8 @@ def init_router(app):
         name = request.args.get("name", "Recruto")
         msg = request.args.get("message", "Давай дружить!")
         result = service.format_message(name, msg)
-        return jsonify({"message": result})
+
+        return Response(
+            json.dumps({"message": result}, ensure_ascii=False),
+            content_type='application/json; charset=utf-8'
+        )

@@ -8,6 +8,7 @@ from internal.config.config import load_config
 from internal.handler.handler import init_router
 
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
 
 def graceful_shutdown(sig, frame):
     print("\n 🛑 Server stopped gracefully.")
